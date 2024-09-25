@@ -69,24 +69,17 @@ void setup() {
   pinMode(trigPinD1, OUTPUT);
   pinMode(echoPinD1, INPUT);
   Serial.println("--start-- ");
-  //set on to OFF
-  setzero();
-}
-
-void DoNormalTraffic();  // Declare the function prototype
-
-void setzero(){
   for (int i = 0; i <= ledBRed; i++) {
     pcf20.digitalWrite(i, HIGH);
     pcf21.digitalWrite(i, HIGH);
   }
-  pcf20.digitalWrite(ledARed, LOW);
-  pcf20.digitalWrite(ledBRed, LOW);
-  pcf21.digitalWrite(ledCRed, LOW);
-  pcf21.digitalWrite(ledDRed, LOW);
-}
-void loop() {
   
+}
+
+void DoNormalTraffic();  // Declare the function prototype
+void setzero();
+
+void loop() {
   int receivedValue = ReceiveData();  // Get the received value
   Serial.println(receivedValue);
   if (receivedValue == 0 || receivedValue == -1) {
@@ -108,6 +101,38 @@ int ReceiveData() {
     } 
   }
   return -1;  // Return -1 if no complete data is received
+}
+
+void controlLEDs(int val) {
+  // Turn on or off LEDs based on the received value
+  switch (val) {
+    case 1:  // Turn on ledAGreen
+      pcf20.digitalWrite(ledARed, HIGH);
+      pcf20.digitalWrite(ledAYellow, HIGH);
+      pcf20.digitalWrite(ledAGreen, LOW);
+      break;
+    case 2:  // Turn off ledAGreen
+      pcf20.digitalWrite(ledBRed, HIGH);
+      pcf20.digitalWrite(ledBYellow, HIGH);
+      pcf20.digitalWrite(ledBGreen, LOW);
+      break;
+    case 3:  // Turn on ledBGreen
+      pcf21.digitalWrite(ledCRed, HIGH);
+      pcf21.digitalWrite(ledCYellow, HIGH);
+      pcf21.digitalWrite(ledCGreen, LOW);
+      break;
+    case 4:  // Turn off ledBGreen
+      pcf21.digitalWrite(ledDRed, HIGH);
+      pcf21.digitalWrite(ledDYellow, HIGH);
+      pcf21.digitalWrite(ledDGreen, LOW);
+      break;
+    case 5:
+      enterSleepMode();
+      break;
+    default:
+      Serial.println("Unknown command");
+      break;
+  }
 }
 
 void DoNormalTraffic() {  // Correct function name
@@ -154,43 +179,27 @@ void roadOpen(Adafruit_PCF8574 &pcf, uint8_t ledRed, uint8_t ledYellow, uint8_t 
   delay(1000);  // Keep red on for 1 second
 }
 
-void controlLEDs(int val) {
-  // Turn on or off LEDs based on the received value
-  switch (val) {
-    case 1:  // Turn on ledAGreen
-      pcf20.digitalWrite(ledARed, HIGH);
-      pcf20.digitalWrite(ledAYellow, HIGH);
-      pcf20.digitalWrite(ledAGreen, LOW);
-      break;
-    case 2:  // Turn off ledAGreen
-      pcf20.digitalWrite(ledBRed, HIGH);
-      pcf20.digitalWrite(ledBYellow, HIGH);
-      pcf20.digitalWrite(ledBGreen, LOW);
-      break;
-    case 3:  // Turn on ledBGreen
-      pcf21.digitalWrite(ledCRed, HIGH);
-      pcf21.digitalWrite(ledCYellow, HIGH);
-      pcf21.digitalWrite(ledCGreen, LOW);
-      break;
-    case 4:  // Turn off ledBGreen
-      pcf21.digitalWrite(ledDRed, HIGH);
-      pcf21.digitalWrite(ledDYellow, HIGH);
-      pcf21.digitalWrite(ledDGreen, LOW);
-      break;
-    case 5:
-      enterSleepMode();
-      break;
-    default:
-      Serial.println("Unknown command");
-      break;
+void setzero(){
+  for (int i = 0; i <= ledBRed; i++) {
+    pcf20.digitalWrite(i, HIGH);
+    pcf21.digitalWrite(i, HIGH);
   }
+  pcf20.digitalWrite(ledARed, LOW);
+  pcf20.digitalWrite(ledBRed, LOW);
+  pcf21.digitalWrite(ledCRed, LOW);
+  pcf21.digitalWrite(ledDRed, LOW);
 }
 
 void enterSleepMode() {
   // Blink the yellow LED a few times before going to sleep
-    
+    for (int i = 0; i <= ledBRed; i++) {
+    pcf20.digitalWrite(i, HIGH);
+    pcf21.digitalWrite(i, HIGH);
+  }
     pcf20.digitalWrite(ledAYellow, LOW);  // Turn the yellow LED on
-
+    pcf20.digitalWrite(ledBYellow, LOW);  // Turn the yellow LED on
+    pcf21.digitalWrite(ledCYellow, LOW);  // Turn the yellow LED on
+    pcf21.digitalWrite(ledDYellow, LOW);  // Turn the yellow LED on
   // Enable the watchdog timer for sleep
   wdt_enable(WDTO_2S); // Set the WDT timeout to 1 second
   
@@ -203,8 +212,9 @@ void enterSleepMode() {
   sleep_disable(); // Disable sleep mode
   wdt_reset(); // Reset the watchdog timer
 
-  pcf20.digitalWrite(ledAYellow, HIGH); 
+ 
 }
+
 
 
 long getUltrasonicDistance(uint8_t trigPin, uint8_t echoPin) {
