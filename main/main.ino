@@ -3,10 +3,11 @@
 #include <Adafruit_PCF8574.h>
 #include <SoftwareSerial.h>
 #include <avr/sleep.h>
+#include "RTClib.h"
 SoftwareSerial Uno(3, 2);  // RX | TX
 Adafruit_PCF8574 pcf20;    // Initialize PCF8574 for first set of LEDs
 Adafruit_PCF8574 pcf21;    // Initialize PCF8574 for second set of LEDs
-
+RTC_DS1307 rtc;
 // LED Pin Definitions for PCF8574 at addresses 0x20 and 0x3E
 #define ledAGreen 0
 #define ledAYellow 1
@@ -35,7 +36,7 @@ Adafruit_PCF8574 pcf21;    // Initialize PCF8574 for second set of LEDs
 void setup() {
   pinMode(3, INPUT);
   pinMode(2, OUTPUT);
-  
+
   Uno.begin(9600);
   Serial.begin(9600);
 
@@ -50,7 +51,11 @@ void setup() {
     while (1)
       ;
   }
-
+ if (!rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    while (1);
+  }
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   // Set the LED pins as OUTPUT
   for (int i = 0; i <= ledBRed; i++) {
     pcf20.pinMode(i, OUTPUT);
@@ -59,7 +64,7 @@ void setup() {
   // Set the sensor pins as OUTPUT
   pinMode(trigPinA1, OUTPUT);
   pinMode(echoPinA1, INPUT);
-  
+
   pinMode(trigPinB1, OUTPUT);
   pinMode(echoPinB1, INPUT);
 
@@ -73,13 +78,13 @@ void setup() {
     pcf20.digitalWrite(i, HIGH);
     pcf21.digitalWrite(i, HIGH);
   }
-  
 }
 
 void DoNormalTraffic();  // Declare the function prototype
 void setzero();
 
 void loop() {
+  checkAndSleep();
   int receivedValue = ReceiveData();  // Get the received value
   Serial.println(receivedValue);
   if (receivedValue == 0 || receivedValue == -1) {
@@ -87,18 +92,35 @@ void loop() {
     DoNormalTraffic();  // Handle normal traffic if no special command is received
   } else if (receivedValue > 0) {
     controlLEDs(receivedValue);  // Control LEDs based on the received value
-  }
+  } 
   delay(1000);
 }
 
+void checkAndSleep() {
+  DateTime now = rtc.now();
+  
+  // Print current time
+  Serial.print(now.hour(), DEC);
+  Serial.print(':');
+  Serial.print(now.minute(), DEC);
+  Serial.print(':');
+  Serial.println(now.second(), DEC);
+
+  // Check if the time is between 22:00 and 04:00
+  if (now.hour() >= 22 || now.hour() < 4) {
+    Serial.println("Entering sleep mode...");
+    enterSleepMode();
+  }
+}
+
 int ReceiveData() {
-  static String inputString = "";     // A string to hold incoming data
-  while (Uno.available() > 0) {       // If there's incoming data
-    char c = Uno.read();              // Read a character
-    if (c == '\n') {                  
+  static String inputString = "";  // A string to hold incoming data
+  while (Uno.available() > 0) {    // If there's incoming data
+    char c = Uno.read();           // Read a character
+    if (c == '\n') {
       int val = Uno.parseInt();
-      return val;                     
-    } 
+      return val;
+    }
   }
   return -1;  // Return -1 if no complete data is received
 }
@@ -165,8 +187,8 @@ void roadOpen(Adafruit_PCF8574 &pcf, uint8_t ledRed, uint8_t ledYellow, uint8_t 
   if (receivedValue > 1) {
     return;
   }
-  
-  int delayTime = (distance <= 15 ) ? 7000 : 2000;
+
+  int delayTime = (distance <= 15) ? 7000 : 2000;
   pcf.digitalWrite(ledRed, HIGH);
   pcf.digitalWrite(ledGreen, LOW);
   delay(delayTime);
@@ -179,7 +201,7 @@ void roadOpen(Adafruit_PCF8574 &pcf, uint8_t ledRed, uint8_t ledYellow, uint8_t 
   delay(1000);  // Keep red on for 1 second
 }
 
-void setzero(){
+void setzero() {
   for (int i = 0; i <= ledBRed; i++) {
     pcf20.digitalWrite(i, HIGH);
     pcf21.digitalWrite(i, HIGH);
@@ -192,27 +214,25 @@ void setzero(){
 
 void enterSleepMode() {
   // Blink the yellow LED a few times before going to sleep
-    for (int i = 0; i <= ledBRed; i++) {
+  for (int i = 0; i <= ledBRed; i++) {
     pcf20.digitalWrite(i, HIGH);
     pcf21.digitalWrite(i, HIGH);
   }
-    pcf20.digitalWrite(ledAYellow, LOW);  // Turn the yellow LED on
-    pcf20.digitalWrite(ledBYellow, LOW);  // Turn the yellow LED on
-    pcf21.digitalWrite(ledCYellow, LOW);  // Turn the yellow LED on
-    pcf21.digitalWrite(ledDYellow, LOW);  // Turn the yellow LED on
+  pcf20.digitalWrite(ledAYellow, LOW);  // Turn the yellow LED on
+  pcf20.digitalWrite(ledBYellow, LOW);  // Turn the yellow LED on
+  pcf21.digitalWrite(ledCYellow, LOW);  // Turn the yellow LED on
+  pcf21.digitalWrite(ledDYellow, LOW);  // Turn the yellow LED on
   // Enable the watchdog timer for sleep
-  wdt_enable(WDTO_2S); // Set the WDT timeout to 1 second
-  
+  wdt_enable(WDTO_2S);  // Set the WDT timeout to 1 second
+
   // Sleep mode
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-  sleep_enable(); // Enable sleep mode
-  sleep_cpu();    // Put the Arduino to sleep
+  sleep_enable();  // Enable sleep mode
+  sleep_cpu();     // Put the Arduino to sleep
 
   // The processor will wake up here after the WDT timeout
-  sleep_disable(); // Disable sleep mode
-  wdt_reset(); // Reset the watchdog timer
-
- 
+  sleep_disable();  // Disable sleep mode
+  wdt_reset();      // Reset the watchdog timer
 }
 
 
