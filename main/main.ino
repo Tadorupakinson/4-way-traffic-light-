@@ -28,7 +28,7 @@ RTC_DS1307 rtc;
 #define echoPinA1 5
 #define trigPinB1 6
 #define echoPinB1 7
-#define trigPinC1 8  // Assuming same pins for C; adjust as necessary
+#define trigPinC1 8  
 #define echoPinC1 9
 #define trigPinD1 10
 #define echoPinD1 11
@@ -78,12 +78,14 @@ void setup() {
     pcf20.digitalWrite(i, HIGH);
     pcf21.digitalWrite(i, HIGH);
   }
+  wdt_enable(WDTO_8S);
 }
 
 void DoNormalTraffic();  // Declare the function prototype
 void setzero();
 
 void loop() {
+  wdt_reset();
   checkAndSleep();
   int receivedValue = ReceiveData();  // Get the received value
   Serial.println(receivedValue);
@@ -158,6 +160,7 @@ void controlLEDs(int val) {
 }
 
 void DoNormalTraffic() {  // Correct function name
+  
   long distanceA1 = getUltrasonicDistance(trigPinA1, echoPinA1);
   Serial.print("Distance A1: ");
   Serial.println(distanceA1);
@@ -188,17 +191,19 @@ void roadOpen(Adafruit_PCF8574 &pcf, uint8_t ledRed, uint8_t ledYellow, uint8_t 
     return;
   }
 
-  int delayTime = (distance <= 15) ? 7000 : 2000;
+  int delayTime = (distance <= 5) ? 7000 : 2000;
   pcf.digitalWrite(ledRed, HIGH);
   pcf.digitalWrite(ledGreen, LOW);
   delay(delayTime);
+  wdt_reset();
   delay(3000);  // Keep green on for 3 seconds
   pcf.digitalWrite(ledGreen, HIGH);
   pcf.digitalWrite(ledYellow, LOW);
   delay(2000);  // Keep yellow on for 2 seconds
   pcf.digitalWrite(ledYellow, HIGH);
   pcf.digitalWrite(ledRed, LOW);
-  delay(1000);  // Keep red on for 1 second
+  delay(2000);  // Keep red on for 1 second
+  wdt_reset();
 }
 
 void setzero() {
