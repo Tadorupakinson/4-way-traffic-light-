@@ -55,7 +55,7 @@ void setup() {
     Serial.println("Couldn't find RTC");
     while (1);
   }
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  
   // Set the LED pins as OUTPUT
   for (int i = 0; i <= ledBRed; i++) {
     pcf20.pinMode(i, OUTPUT);
@@ -99,6 +99,7 @@ void loop() {
 }
 
 void checkAndSleep() {
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   DateTime now = rtc.now();
   
   // Print current time
