@@ -3,7 +3,7 @@
 #include <Adafruit_PCF8574.h>
 #include <SoftwareSerial.h>
 #include <avr/sleep.h>
-#include "RTClib.h"
+#include <RTClib.h>
 SoftwareSerial Uno(3, 2);  // RX | TX
 Adafruit_PCF8574 pcf20;    // Initialize PCF8574 for first set of LEDs
 Adafruit_PCF8574 pcf21;    // Initialize PCF8574 for second set of LEDs
@@ -39,7 +39,7 @@ void setup() {
 
   Uno.begin(9600);
   Serial.begin(9600);
-
+  
   // Initialize PCF8574 at the specified addresses
   if (!pcf20.begin(0x20)) {
     Serial.println("Couldn't find PCF8574 at 0x20");
@@ -54,6 +54,14 @@ void setup() {
  if (!rtc.begin()) {
     Serial.println("Couldn't find RTC");
     while (1);
+  }
+  if (!rtc.isrunning()) {
+    Serial.println("RTC is NOT running, setting time to compile time...");
+    // Set the RTC to the time when the sketch was compiled
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  } else {
+    // Optionally, check if the time is reasonable (e.g., year >= 2023)
+    DateTime now = rtc.now();
   }
   
   // Set the LED pins as OUTPUT
@@ -99,7 +107,7 @@ void loop() {
 }
 
 void checkAndSleep() {
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  
   DateTime now = rtc.now();
   
   // Print current time
