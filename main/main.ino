@@ -63,7 +63,7 @@ void setup() {
     // Optionally, check if the time is reasonable (e.g., year >= 2023)
     DateTime now = rtc.now();
   }
-  
+  //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   // Set the LED pins as OUTPUT
   for (int i = 0; i <= ledBRed; i++) {
     pcf20.pinMode(i, OUTPUT);
@@ -91,10 +91,13 @@ void setup() {
 
 void DoNormalTraffic();  // Declare the function prototype
 void setzero();
-
+bool isSleeping = false;
 void loop() {
   wdt_reset();
   checkAndSleep();
+  if (isSleeping) {
+    return;
+  }
   int receivedValue = ReceiveData();  // Get the received value
   Serial.println(receivedValue);
   if (receivedValue == 0 || receivedValue == -1) {
@@ -107,9 +110,7 @@ void loop() {
 }
 
 void checkAndSleep() {
-  
   DateTime now = rtc.now();
-  
   // Print current time
   Serial.print(now.hour(), DEC);
   Serial.print(':');
@@ -121,7 +122,10 @@ void checkAndSleep() {
   if (now.hour() >= 22 || now.hour() < 4) {
     Serial.println("Entering sleep mode...");
     enterSleepMode();
-  }
+    isSleeping = true;
+} else {
+    isSleeping = false;
+}
 }
 
 int ReceiveData() {
